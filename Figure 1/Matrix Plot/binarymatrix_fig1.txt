@@ -1,0 +1,24 @@
+"Term" "Sources" "Category_low_high_48hrs.csv" "Category_low_high_24hrs.csv" "LPS_Category_low_high_24hrs.csv" "Category_low_high_168hrs.csv" "Category_high_low_24hrs.csv" "LPS_Category_high_low_24hrs.csv" "LPS_Category_high_low_48hrs.csv" "Category_high_low_168hrs.csv"
+"1" "Aurora B signaling" "BioPlanet_2019" 1 0 0 0 0 0 0 0
+"2" "Collagen Chain Trimerization R-HSA-8948216" "Reactome_2022" 0 1 0 0 0 0 0 0
+"3" "Cross-presentation Of Particulate Exogenous Antigens (Phagosomes) R-HSA-1236973" "Reactome_2022" 0 0 1 0 0 0 0 0
+"4" "Cross-presentation of particulate exogenous antigens (phagosomes)" "BioPlanet_2019" 0 0 1 0 0 0 0 0
+"5" "Cytoplasmic ribosomal proteins" "BioPlanet_2019" 0 0 0 1 0 0 0 0
+"6" "Defective CSF2RA Causes SMDP4 R-HSA-5688890" "Reactome_2022" 0 0 0 0 1 1 0 0
+"7" "Diseases Associated With Surfactant Metabolism R-HSA-5687613" "Reactome_2022" 0 0 0 0 1 1 0 0
+"8" "Eukaryotic Translation Termination R-HSA-72764" "Reactome_2022" 0 0 0 1 0 0 0 0
+"9" "Golgi-associated vesicle biogenesis" "BioPlanet_2019" 0 0 0 0 0 0 1 0
+"10" "Influenza infection" "BioPlanet_2019" 0 0 0 1 0 0 0 0
+"11" "Influenza viral RNA transcription and replication" "BioPlanet_2019" 0 0 0 1 0 0 0 0
+"12" "Interleukin-10 Signaling R-HSA-6783783" "Reactome_2022" 0 0 1 0 0 0 0 1
+"13" "Lissencephaly gene (LIS1) in neuronal migration and development" "BioPlanet_2019" 0 1 0 0 0 0 0 0
+"14" "Lysosome Vesicle Biogenesis R-HSA-432720" "Reactome_2022" 0 0 0 0 0 0 1 0
+"15" "Lysosome vesicle biogenesis" "BioPlanet_2019" 0 0 0 0 0 0 1 0
+"16" "NO2-dependent IL-12 pathway in NK cells" "BioPlanet_2019" 0 0 0 0 0 0 0 1
+"17" "Peptide Chain Elongation R-HSA-156902" "Reactome_2022" 0 0 0 1 0 0 0 0
+"18" "RHO GTPases Activate NADPH Oxidases R-HSA-5668599" "Reactome_2022" 0 0 1 0 0 0 0 0
+"19" "Resolution Of Sister Chromatid Cohesion R-HSA-2500257" "Reactome_2022" 1 0 0 0 0 0 0 0
+"20" "Selenocysteine Synthesis R-HSA-2408557" "Reactome_2022" 0 0 0 1 0 0 0 0
+"21" "Surfactant Metabolism R-HSA-5683826" "Reactome_2022" 0 0 0 0 1 1 0 0
+"22" "Syndecan 1 pathway" "BioPlanet_2019" 0 1 0 0 0 0 0 0
+"23" "T cell receptor signaling in naive CD4+ T cells" "BioPlanet_2019" 0 0 0 0 0 0 0 1

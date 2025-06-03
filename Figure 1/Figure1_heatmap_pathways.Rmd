@@ -1,0 +1,244 @@
+---
+title: "Fig1_heatmap"
+author: "Sergio Poli"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+
+#Figure 1. Heatmap of canonical pathway genes
+Will create the first heatmap, where rows are genes that are part of the TGF-B pathway and LPS pathway as per msigdb (Broad), columns are averaged expression of each condition/time/dose.
+
+Will use count-data object and will subset it by TGF-b genes;
+```{r, echo=FALSE}
+dim(count_data)
+
+```
+
+# Install and load the KEGGREST package
+```{r pathway definition}
+library(KEGGREST)
+library(org.Hs.eg.db)
+# Retrieve the TGF-beta signaling pathway genes from KEGG
+tgfb_pathway <- keggGet("hsa04350")[[1]]$GENE
+# Extract gene names
+tgfb_genes <- tgfb_pathway[seq(1, length(tgfb_pathway), by = 2)]
+
+gene_symbols <- mapIds(org.Hs.eg.db, keys = tgfb_genes, column = "SYMBOL", keytype = "ENTREZID", multiVals = "first")
+
+# Convert the named character vector to a data frame
+gene_symbols_df <- data.frame(
+  EntrezID = names(gene_symbols),
+  GeneSymbol = gene_symbols,
+  stringsAsFactors = FALSE)
+
+# Print the data frame
+print(gene_symbols_df)
+
+
+```
+
+Now lets obtain the genes form the LPS pathway
+
+```{r pathway lps, echo=FALSE}
+# Retrieve the LPS signaling pathway genes from KEGG
+lps_pathway <- keggGet("hsa04620")[[1]]$GENE
+
+# Extract gene symbols
+# Gene symbols are in the odd positions and descriptions in the even positions
+gene_symbols_LPS <- lps_pathway[seq(2, length(lps_pathway), by = 2)]
+gene_symbols_LPS <- gsub(";.*", "", gene_symbols)
+
+# Print the gene symbols
+print(gene_symbols_LPS)
+```
+
+Now, lets subset the count matrix to jsut these two genesets
+
+```{r subsetting}
+#LPS
+count_data_subset_LPS<- count_data[rownames(count_data) %in% gene_symbols_LPS,]
+dim(count_data_subset_LPS)
+#TGF
+count_data_subset_TGF<- count_data[rownames(count_data) %in% gene_symbols_df$GeneSymbol,]
+dim(count_data_subset_TGF)
+
+
+#Filter for median count greater than 1 to delete non-expressed genes
+count_data_subset_LPS
+row_medians <- apply(count_data_subset_LPS, 1, median)
+filtered_data_LPS <- count_data_subset_LPS[row_medians >= 1, ]
+print(row_medians)
+
+```
+
+```{r TGF-B}
+count_data_subset_TGF
+row_medians <- apply(count_data_subset_TGF, 1, median)
+filtered_data_TGF <- count_data_subset_TGF[row_medians >= 1, ]
+print(row_medians)
+
+```
+
+Check dimensions of your final tables and phenotype data tables
+
+```{r dim}
+dim(pheno_data)
+```
+
+```{r dim}
+dim(filtered_data_LPS)
+```
+
+```{r dim}
+dim(filtered_data_TGF)
+```
+
+Will start drawing the Heatmap, using ComplexHeatmap package. Initially, will divide between Cryo and Fresh, then by condition (TGF, LPS, Vehicle), then by Dosage, ordered in ascendent fashion as per expo time. 
+
+```{r Heatmap Creation}
+library(ComplexHeatmap)
+library(viridis)
+scaled_data_heatmap_pathways <- t(scale(t(filtered_data_TGF)))
+table(is.na(scaled_data_heatmap_pathways))
+scaled_data_heatmap_pathways[scaled_data_heatmap_pathways > 3] <- 3
+scaled_data_heatmap_pathways[scaled_data_heatmap_pathways < -3] <- -3
+
+#Combine factors for spliting heatmap
+pheno_data$Test_Substance <- gsub("TGF_Beta", "TGF-B", pheno_data$Test_Substance)
+pheno_data$Test_Substance <- gsub("Vehicle_Control", "Vehicle", pheno_data$Test_Substance)
+
+combined_factor <- paste(pheno_data$Exposure_Time, pheno_data$cryo, pheno_data$Test_Substance, sep = "_")
+
+
+# Specify the order of levels including Test_Substance
+ordered_levels <- c(
+  "6_Cryo_Vehicle", "6_Fresh_Vehicle", "6_Cryo_LPS", "6_Fresh_LPS",
+  "24_Cryo_Vehicle", "24_Fresh_Vehicle", "24_Cryo_TGF-B", "24_Fresh_TGF-B", "24_Cryo_LPS", "24_Fresh_LPS",
+  "48_Cryo_Vehicle", "48_Fresh_Vehicle", "48_Cryo_TGF-B", "48_Fresh_TGF-B", "48_Cryo_LPS", "48_Fresh_LPS",
+  "168_Cryo_Vehicle", "168_Fresh_Vehicle", "168_Cryo_TGF-B", "168_Fresh_TGF-B",
+  "336_Cryo_Vehicle", "336_Fresh_Vehicle", "336_Cryo_TGF-B", "336_Fresh_TGF-B")
+# Convert combined factor to a factor with the specified levels
+combined_factor <- factor(combined_factor, levels = ordered_levels)
+
+#Heatmap with modified annotations
+categorical_colors <- list(
+  "Cryo vs. Fresh" = c("Cryo" = "forestgreen", "Fresh" ="darkslateblue"),
+  "Condition" = c("LPS" = "firebrick1", "TGF-B" = "dodgerblue1", "Vehicle"="yellow2"))
+
+
+# Create the annotation
+heatmap_anno_mod<- pheno_data[,(2:5)]
+heatmap_anno_mod2<- heatmap_anno_mod[,-3]
+colnames(heatmap_anno_mod2)<- c("Condition", "Dose", "Cryo vs. Fresh")
+ha <- HeatmapAnnotation(df = heatmap_anno_mod2,
+                        col = categorical_colors,
+                        which = "column",
+                        annotation_height = unit(c(0.2, 0.2, 0.2, 0.2), "cm"), border = T,
+                         annotation_name_gp = gpar(fontsize = 8, fontface = "bold", col = "black"))
+
+
+heatmap_TGF = Heatmap(scaled_data_heatmap_pathways,
+        name = "TGF-B Pathway Expression",
+        cluster_rows = TRUE,
+        cluster_columns = F,
+        show_row_names = FALSE,
+        show_column_names = F,
+        column_title = NULL,
+        row_title = "TGF-B Pathway",
+        top_annotation = ha,
+        col = colorRamp2(c(-3, 0, 3), c("dodgerblue2", "white", "firebrick2")),
+        heatmap_legend_param = list(title = "Expression Levels"),
+        column_split = combined_factor)
+
+heatmap_TGF
+```
+Now lets create the LPS heatmap
+
+```{r LPS Heatmap}
+
+scaled_data_heatmap_pathways <- t(scale(t(filtered_data_LPS)))
+table(is.na(scaled_data_heatmap_pathways))
+scaled_data_heatmap_pathways[scaled_data_heatmap_pathways > 3] <- 3
+scaled_data_heatmap_pathways[scaled_data_heatmap_pathways < -3] <- -3
+
+
+#Combine factors for spliting heatmap
+pheno_data$Test_Substance <- gsub("TGF_Beta", "TGF-B", pheno_data$Test_Substance)
+pheno_data$Test_Substance <- gsub("Vehicle_Control", "Vehicle", pheno_data$Test_Substance)
+
+combined_factor <- paste(pheno_data$Exposure_Time, pheno_data$cryo, pheno_data$Test_Substance, sep = "_")
+
+
+# Specify the order of levels including Test_Substance
+ordered_levels <- c(
+  "6_Cryo_Vehicle", "6_Fresh_Vehicle", "6_Cryo_LPS", "6_Fresh_LPS",
+  "24_Cryo_Vehicle", "24_Fresh_Vehicle", "24_Cryo_TGF-B", "24_Fresh_TGF-B", "24_Cryo_LPS", "24_Fresh_LPS",
+  "48_Cryo_Vehicle", "48_Fresh_Vehicle", "48_Cryo_TGF-B", "48_Fresh_TGF-B", "48_Cryo_LPS", "48_Fresh_LPS",
+  "168_Cryo_Vehicle", "168_Fresh_Vehicle", "168_Cryo_TGF-B", "168_Fresh_TGF-B",
+  "336_Cryo_Vehicle", "336_Fresh_Vehicle", "336_Cryo_TGF-B", "336_Fresh_TGF-B"
+)
+# Convert combined factor to a factor with the specified levels
+combined_factor <- factor(combined_factor, levels = ordered_levels)
+
+
+heatmap_LPS = Heatmap(scaled_data_heatmap_pathways,
+        name = "LPS Pathway Expression",
+        cluster_rows = TRUE,
+        cluster_columns = F,
+        show_row_names = FALSE,
+        show_column_names = F,
+        row_title = "LPS Pathway",
+        column_title = NULL,
+        #top_annotation = ha,
+        col = colorRamp2(c(-3, 0, 3), c("dodgerblue2", "white", "firebrick2")),
+        heatmap_legend_param = list(title = "Expression Levels"),
+        column_split = combined_factor)
+
+heatmap_LPS
+```
+Now let's merge both heatmaps
+
+```{r print heatmaps}
+heatmap_TGF %v% heatmap_LPS
+```
+Now lets export it into PDF/PNG/SVG formats
+
+```{r exports}
+save_heatmap <- function(heatmap1, heatmap2, filename_prefix) {
+  # PDF
+  pdf(paste0(filename_prefix, ".pdf"), width = 10, height = 6)
+  draw(heatmap1 %v% heatmap2)
+  dev.off()
+  
+  # SVG
+  svg(paste0(filename_prefix, ".svg"), width = 10, height = 6)
+  draw(heatmap1 %v% heatmap2)
+  dev.off()
+  
+  # PNG
+  png(paste0(filename_prefix, ".png"), width = 1000, height = 600, res = 100)
+  draw(heatmap1 %v% heatmap2)
+  dev.off()
+}
+
+save_heatmap(heatmap_TGF, heatmap_LPS, "combined_heatmap")
+
+```
+
+All set. 
+Next: GSVA of thee two pathways. 
