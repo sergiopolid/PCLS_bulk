@@ -1,0 +1,455 @@
+---
+title: "deconvolution"
+author: "SergioPoli"
+date: "2025-02-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(Biobase)
+library(AnnotationDbi)
+library(tidyverse)
+library(Seurat)
+library(GSVA)
+library(MuSiC)
+```
+
+## MuSiC
+
+
+```{r laod data}
+load("/n/data1/bwh/medicine/rosas/PCLS_bulk/pcls_object.RData")
+pcls
+colnames(pcls$matrix)<- pcls$column_metadata$S_ID
+library(Biobase)
+rownames(pcls$row_metadata) <- pcls$row_metadata$ENSEMBL
+
+pclsbio <- ExpressionSet(
+  assayData = pcls$matrix,
+  phenoData = AnnotatedDataFrame(data = pcls$column_metadata),
+  featureData = AnnotatedDataFrame(data = pcls$row_metadata)
+)
+
+```
+
+```{r scRNAseq data}
+ GSE135893_ILD_annotated_fullsize <- readRDS("/n/data1/bwh/medicine/rosas/Bioinformatic_Datasets/Vanderbilt/GSE135893_ILD_annotated_fullsize.rds")
+
+seurat<- UpdateSeuratObject(GSE135893_ILD_annotated_fullsize)
+rm(GSE135893_ILD_annotated_fullsize)
+
+
+```
+
+
+```{r}
+sc_reference_sce <- as.SingleCellExperiment(seurat)
+library(SummarizedExperiment)
+library(SingleCellExperiment)
+music_results <- music_prop(bulk.mtx = exprs(pclsbio),
+                            sc.sce  = sc_reference_sce,
+                            clusters = "celltype",
+                            samples = "Sample_Name",  
+                            verbose = TRUE)
+```
+```{r save}
+saveRDS(music_results, file = "music_results.rds")
+```
+
+```{r}
+cell_props <- music_results$Est.prop.weighted
+# Inspect the matrix
+head(cell_props)
+# Suppose you have a data frame 'sample_metadata' with a column 'Sample_Name'
+sample_metadata <- pData(pclsbio)  # or however you store sample metadata
+
+# Convert cell_props to a data frame
+cell_props_df <- as.data.frame(cell_props)
+cell_props_df$S_ID <- rownames(cell_props_df)
+
+# Merge with metadata
+library(dplyr)
+merged_df <- left_join(sample_metadata, cell_props_df, by = "S_ID")
+
+merged_df
+```
+
+```{r}
+library(ggpubr)
+library(ggplot2)
+
+# Define the comparison: here, we're comparing "Cryo" vs "Fresh"
+my_comparisons <- list(c("Cryo", "Fresh"))
+
+# Create a boxplot with jittered points, then facet by cell type.
+# We'll add p-values for the Cryo vs Fresh comparison in each facet.
+p <- ggboxplot(df_long, x = "cryo", y = "Proportion", 
+               color = "cryo", palette = "jco", add = "jitter") +
+  facet_wrap(~ Cell_Type, ncol = 5, scales = "free_y") +
+  stat_compare_means(comparisons = my_comparisons, 
+                     label = "p.signif", 
+                     method = "t.test") +
+  stat_compare_means(label = "p.format", method = "t.test") +
+  labs(title = "Cell Type Proportions by Cryo Condition",
+       x = "Cryo Condition", 
+       y = "Estimated Proportion") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Print the plot
+print(p)
+
+```
+
+```{r}
+rm(seurat)
+rm(sc_reference_sce)
+
+save.image("deconvolution.RData")
+```
+
+```{r}
+---
+title: "deconvolution"
+author: "SergioPoli"
+date: "2025-02-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(Biobase)
+library(AnnotationDbi)
+library(tidyverse)
+library(Seurat)
+library(GSVA)
+library(MuSiC)
+```
+
+## MuSiC
+
+
+```{r laod data}
+load("/n/data1/bwh/medicine/rosas/PCLS_bulk/pcls_object.RData")
+pcls
+colnames(pcls$matrix)<- pcls$column_metadata$S_ID
+library(Biobase)
+rownames(pcls$row_metadata) <- pcls$row_metadata$ENSEMBL
+
+pclsbio <- ExpressionSet(
+  assayData = pcls$matrix,
+  phenoData = AnnotatedDataFrame(data = pcls$column_metadata),
+  featureData = AnnotatedDataFrame(data = pcls$row_metadata)
+)
+
+```
+
+```{r scRNAseq data}
+ GSE135893_ILD_annotated_fullsize <- readRDS("/n/data1/bwh/medicine/rosas/Bioinformatic_Datasets/Vanderbilt/GSE135893_ILD_annotated_fullsize.rds")
+
+seurat<- UpdateSeuratObject(GSE135893_ILD_annotated_fullsize)
+rm(GSE135893_ILD_annotated_fullsize)
+
+
+```
+
+
+```{r}
+sc_reference_sce <- as.SingleCellExperiment(seurat)
+library(SummarizedExperiment)
+library(SingleCellExperiment)
+music_results <- music_prop(bulk.mtx = exprs(pclsbio),
+                            sc.sce  = sc_reference_sce,
+                            clusters = "celltype",
+                            samples = "Sample_Name",  
+                            verbose = TRUE)
+```
+```{r save}
+saveRDS(music_results, file = "music_results.rds")
+```
+
+```{r}
+cell_props <- music_results$Est.prop.weighted
+# Inspect the matrix
+head(cell_props)
+# Suppose you have a data frame 'sample_metadata' with a column 'Sample_Name'
+sample_metadata <- pData(pclsbio)  # or however you store sample metadata
+
+# Convert cell_props to a data frame
+cell_props_df <- as.data.frame(cell_props)
+cell_props_df$S_ID <- rownames(cell_props_df)
+
+# Merge with metadata
+library(dplyr)
+merged_df <- left_join(sample_metadata, cell_props_df, by = "S_ID")
+
+merged_df
+```
+
+```{r}
+library(ggpubr)
+library(ggplot2)
+
+# Define the comparison: here, we're comparing "Cryo" vs "Fresh"
+my_comparisons <- list(c("Cryo", "Fresh"))
+
+# Create a boxplot with jittered points, then facet by cell type.
+# We'll add p-values for the Cryo vs Fresh comparison in each facet.
+p <- ggboxplot(df_long, x = "cryo", y = "Proportion", 
+               color = "cryo", palette = "jco", add = "jitter") +
+  facet_wrap(~ Cell_Type, ncol = 5, scales = "free_y") +
+  stat_compare_means(comparisons = my_comparisons, 
+                     label = "p.signif", 
+                     method = "t.test") +
+  stat_compare_means(label = "p.format", method = "t.test") +
+  labs(title = "Cell Type Proportions by Cryo Condition",
+       x = "Cryo Condition", 
+       y = "Estimated Proportion") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Print the plot
+print(p)
+
+```
+
+```{r}
+rm(seurat)
+rm(sc_reference_sce)
+
+save.image("deconvolution.RData")
+```
+
+```{r}
+library(dplyr)
+library(ggpubr)      # or use ggplot2 + geom_boxplot if you prefer
+
+## 1 ───────────  Filter to the two substances you care about
+df4 <- df_long %>%
+  filter(Test_Substance %in% c("Vehicle_Control", "TGF_Beta"))
+
+## 2 ───────────  Build a single grouping variable with clear names
+df4 <- df4 %>%
+  mutate(group = case_when(
+    Test_Substance == "Vehicle_Control" & cryo == "Fresh" ~ "Control_Fresh",
+    Test_Substance == "Vehicle_Control" & cryo == "Cryo"  ~ "Control_Cryo",
+    Test_Substance == "TGF_Beta"   & cryo == "Fresh" ~ "TGF-B_Fresh",
+    Test_Substance == "TGF_Beta"   & cryo == "Cryo"  ~ "TGF-B_Cryo"
+  )) %>%
+  mutate(group = factor(group,
+                        levels = c("Control_Fresh", "Control_Cryo",
+                                   "TGF-B_Fresh", "TGF-B_Cryo")))
+
+## 3 ───────────  Optional: pick just the cell types you want to show
+df4 <- df4 %>% filter(Cell_Type %in% c("Fibroblasts", "Myofibroblasts", "Smooth Muscle Cells", "Endothelial Cells", "Proliferating T Cells",  "Macrophages", "AT2","KRT5-/KRT17+"))
+
+## 4 ───────────  Define pairwise comparisons for p-values (if wanted)
+my_comparisons <- list(
+  c("Control_Fresh", "Control_Cryo"),
+  c("TGF-B_Fresh",  "TGF-B_Cryo"),
+  c("Control_Fresh", "TGF-B_Fresh"),
+  c("Control_Cryo",  "TGF-B_Cryo")
+)
+
+## 5 ───────────  Make the plot
+p <- ggboxplot(df4,
+               x     = "group",
+               y     = "Proportion",
+               color = "group",           # colour by the same variable
+               add   = "jitter",
+               palette = "jco") +         # any ggpubr palette
+     facet_wrap(~ Cell_Type, ncol = 4, scales = "free_y") +
+     stat_compare_means(comparisons = my_comparisons,
+                        method      = "t.test",
+                        label       = "p.signif",
+                        hide.ns     = TRUE) +   # drop “ns” labels
+     labs(title = "Cell-type proportions: Control vs TGF-β (Cryo & Fresh)",
+          x = NULL,
+          y = "Estimated proportion") +
+     theme(legend.position = "none",
+           axis.text.x = element_text(angle = 45, hjust = 1))
+
+print(p)
+
+```
+
+
+```{r}
+library(ggpubr)
+library(dplyr)
+library(sysfonts)   # for Variable Sans
+library(showtext)
+
+## ── 0 · Set up the Variable Sans font ──────────────────────────
+font_add_google("Public Sans", "Variable Sans")  # or any other var-sans font
+showtext_auto()                                  # render text with showtext()
+
+## ── 1 · Force facet order exactly as requested ─────────────────
+cell_order <- c("Fibroblasts", "Myofibroblasts", "Smooth Muscle Cells",
+                "Endothelial Cells",
+                "Proliferating T Cells", "Macrophages", "AT2", "KRT5-/KRT17+")
+
+df4 <- df4 %>%
+  mutate(group = case_when(
+    Test_Substance == "Vehicle_Control" & cryo == "Fresh" ~ "Control_Fresh",
+    Test_Substance == "Vehicle_Control" & cryo == "Cryo"  ~ "Control_Cryo",
+    Test_Substance == "TGF_Beta"        & cryo == "Fresh" ~ "TGF-B_Fresh",
+    Test_Substance == "TGF_Beta"        & cryo == "Cryo"  ~ "TGF-B_Cryo"
+  )) %>%
+  mutate(group = factor(group,
+                        levels = c("Control_Fresh", "Control_Cryo",
+                                   "TGF-B_Fresh",  "TGF-B_Cryo")))
+
+
+
+## ── 2 · Map colours: mustard = Fresh, blue = Cryo ──────────────
+col_map  <- c("Control_Fresh" = "#d4a017",   # mustard
+              "TGF-B_Fresh"   = "#d4a017",
+              "Control_Cryo"  = "#1f78b4",   # blue
+              "TGF-B_Cryo"    = "#1f78b4")
+
+## ── 3 · Build the plot ─────────────────────────────────────────
+p <- ggviolin(df4,
+              x         = "group",
+              y         = "Proportion",
+              color     = "group",
+              fill      = "group",
+              palette   = col_map,
+              trim      = FALSE,      # show full tails
+              scale     = "width",    # equal widths
+              add       = "boxplot",  # small box inside violin
+              add.params = list(width = 0.15, color = "black")) +
+     geom_jitter(size = 1.4, alpha = 0.6, width = 0.12) +       # bigger dots
+     facet_wrap(~ Cell_Type, ncol = 4, scales = "free_y") +
+     stat_compare_means(comparisons = my_comparisons,
+                        method      = "t.test",
+                        label       = "p.signif",
+                        hide.ns     = TRUE) +
+     labs(title = "Cell-type proportions: Control vs TGF-β (Cryo & Fresh)",
+          x = NULL,
+          y = "Estimated proportion") +
+     theme_classic(base_family = "Variable Sans", base_size = 11) +
+     theme(
+       legend.position = "none",
+       strip.text      = element_text(face = "bold"),
+       axis.text.x     = element_text(angle = 45, hjust = 1)
+     )
+
+print(p)
+
+
+library(Cairo)    # loads the Cairo graphics device
+library(ggplot2)  # ggsave() lives here
+
+# ───── 2.  Export the plot ─────
+## a) direct Cairo device (flexible for complex layouts)
+ggsave(
+  filename = "celltype_violin_TGFB.pdf",
+  plot     = p,          # your ggplot/ggpubr object
+  device   = cairo_pdf,  # <- this is the Cairo-based PDF driver
+  width    = 560,        # pixels
+  height   = 300,        # pixels
+  units    = "px",       # tell ggsave these numbers are pixels
+  dpi      = 72          # 560 px / 72 dpi = 7.778 inches, etc.
+)
+print(p)
+
+```
+Now same figure but only with 25 dose concentration
+
+```{r}
+library(dplyr)
+library(ggpubr)
+library(sysfonts)
+library(showtext)
+
+## 0 ── Font (run once) ──────────────────────────────────────────
+font_add_google("Public Sans", "Variable Sans")
+showtext_auto()
+
+## 1 ── Filter: Vehicle_Control (any concentration) + TGF-β at 25 ─
+df4 <- df_long %>%                                   # <── only line that changed
+  filter((Test_Substance == "Vehicle_Control") |
+         (Test_Substance == "TGF_Beta" & Concentration == 25))
+
+## 2 ── Group labels (unchanged) ─────────────────────────────────
+df4 <- df4 %>%
+  mutate(group = case_when(
+    Test_Substance == "Vehicle_Control" & cryo == "Fresh" ~ "Control_Fresh",
+    Test_Substance == "Vehicle_Control" & cryo == "Cryo"  ~ "Control_Cryo",
+    Test_Substance == "TGF_Beta"        & cryo == "Fresh" ~ "TGF-B_Fresh",
+    Test_Substance == "TGF_Beta"        & cryo == "Cryo"  ~ "TGF-B_Cryo"
+  )) %>%
+  mutate(group = factor(group,
+          levels = c("Control_Fresh", "Control_Cryo",
+                     "TGF-B_Fresh",   "TGF-B_Cryo")))
+
+## 3 ── Keep your eight target cell types in the desired facet order ─
+cell_order <- c("Fibroblasts", "Myofibroblasts", "Smooth Muscle Cells",
+                "Endothelial Cells",
+                "Proliferating T Cells", "Macrophages", "AT2", "KRT5-/KRT17+")
+
+df4 <- df4 %>%
+  filter(Cell_Type %in% cell_order) %>%
+  mutate(Cell_Type = factor(Cell_Type, levels = cell_order))
+
+## 4 ── Pairwise comparisons (unchanged) ─────────────────────────
+my_comparisons <- list(
+  c("Control_Fresh", "Control_Cryo"),
+  c("TGF-B_Fresh",  "TGF-B_Cryo"),
+  c("Control_Fresh", "TGF-B_Fresh"),
+  c("Control_Cryo",  "TGF-B_Cryo")
+)
+
+## 5 ── Colour map & plot (unchanged aesthetics, theme_classic) ─
+col_map <- c("Control_Fresh" = "#d4a017",
+             "TGF-B_Fresh"   = "#d4a017",
+             "Control_Cryo"  = "#1f78b4",
+             "TGF-B_Cryo"    = "#1f78b4")
+
+p <- ggviolin(df4,
+              x = "group", y = "Proportion",
+              color = "group", fill = "group",
+              palette = col_map, trim = FALSE, scale = "width",
+              add = "boxplot", add.params = list(width = 0.15, color = "black")) +
+     geom_jitter(size = 1.4, alpha = 0.6, width = 0.12) +
+     facet_wrap(~ Cell_Type, ncol = 4, scales = "free_y") +
+     stat_compare_means(comparisons = my_comparisons,
+                        method = "t.test", label = "p.signif",
+                        hide.ns = TRUE) +
+     labs(title = "Cell-type proportions (TGF-β 25 μg/mL vs Control, Cryo & Fresh)",
+          x = NULL, y = "Estimated proportion") +
+     theme_classic(base_family = "Variable Sans", base_size = 11) +
+     theme(legend.position = "none",
+           strip.text      = element_text(face = "bold"),
+           axis.text.x     = element_text(angle = 45, hjust = 1))
+
+print(p)
+
+
+library(Cairo)    # loads the Cairo graphics device
+library(ggplot2)  # ggsave() lives here
+
+# ───── 2.  Export the plot ─────
+## a) direct Cairo device (flexible for complex layouts)
+
+## b) OR: one-liner with ggsave (internally opens cairo_pdf())
+ggsave(
+  filename = "celltype_violin_TGFB_25only.pdf",
+  plot     = p,          # your ggplot/ggpubr object
+  device   = cairo_pdf,  # <- this is the Cairo-based PDF driver
+  width    = 560,        # pixels
+  height   = 250,        # pixels
+  units    = "px",       # tell ggsave these numbers are pixels
+  dpi      = 72          # 560 px / 72 dpi = 7.778 inches, etc.
+)
+print(p)
+
+```
+
+
+```
+
