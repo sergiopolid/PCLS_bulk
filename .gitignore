@@ -1,0 +1,15 @@
+# RStudio noise
+.Rhistory
+.RData
+.Rproj.user/
+
+# Large data / intermediate objects
+*.RData
+*.rds
+*.csv
+*.pdf          # figures can be regenerated
+data-raw/      # raw inputs you’ll move in a moment
+output/        # rendered figures
+
+# Misc
+R_enviroments/
